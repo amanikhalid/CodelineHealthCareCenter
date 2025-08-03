@@ -22,6 +22,10 @@ namespace CodelineHealthCareCenter.Models
 
         public static IServiceService service; // for ServiceMenu()
 
+        //file path for saving and loading services
+        public static string ServicesFilePath = "Services.txt";
+
+
         // ===================================================
         //2. class properties ...
 
@@ -94,23 +98,23 @@ namespace CodelineHealthCareCenter.Models
             service.ViewServiceInfo();
         }
 
-        public static void SaveToFile(string filePath)
+        public static void SaveServicesToFile()
         {
-            using StreamWriter writer = new StreamWriter(filePath);
-            foreach (var service in Services)
+            using StreamWriter writer = new StreamWriter(ServicesFilePath);
+            foreach (var service in Service.Services)
             {
-                writer.WriteLine($"{service.ServiceId}|{service.ServiceName}|{service.Price}");
+                writer.WriteLine($"{service.ServiceId}|{service.ServiceName}|{service.Price} | {service.ClinicId}");
             }
+            Console.WriteLine("Service data saved successfully.");
         }
 
-        public static void LoadFromFile(string filePath)
+        public static void LoadServicesFromFile()
         {
-            Services.Clear();
             ServiceCount = 0;
 
-            if (!File.Exists(filePath)) return;
+            if (!File.Exists(ServicesFilePath)) return;
 
-            string[] lines = File.ReadAllLines(filePath);
+            string[] lines = File.ReadAllLines(ServicesFilePath);
             foreach (var line in lines)
             {
                 string[] parts = line.Split('|');
@@ -120,11 +124,12 @@ namespace CodelineHealthCareCenter.Models
                 {
                     ServiceId = int.Parse(parts[0])
                 };
-
+                service.ClinicId = parts.Length > 3 ? int.Parse(parts[3]) : 0; // optional ClinicId
                 Services.Add(service);
                 if (service.ServiceId > ServiceCount)
                     ServiceCount = service.ServiceId;
             }
+            Console.WriteLine("Service data loaded successfully.");
         }
 
 

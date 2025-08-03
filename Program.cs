@@ -90,7 +90,7 @@ internal class Program
             //Hospital.UserNationalID.Add(PatientTest.UserNationalID);
             //Hospital.UserNationalID.Add(DoctorTest.UserNationalID);
 
-            User x = new User();
+            
             //-----------------------------------------------------------------------------------
 
             //to load hospital users national id data from file ...
@@ -99,6 +99,8 @@ internal class Program
             Branch.LoadBranches();
             //to load departments data from file ...
             Department.LoadDepartmentsFromFile();
+            //to load services data from file ...
+            Service.LoadServicesFromFile();
             //to load clinics data from file ...
             Clinic.LoadClinicFromFile();
             //to load super admins data to file ...
@@ -109,8 +111,16 @@ internal class Program
             SuperAdmin.LoadAdminsFromFile();
             //to load patient data from file ...
             Patient.LoadPatientsFromFile();
+            Patient.LoadPatientAppointmentsFromFile(); // Load patient appointments from file
             Console.ReadLine();//just to hold the screen ...
+            //to display the main menu options ...
+            ShowMainMenu();
+        }
 
+        //to show main menu options ...
+        public static void ShowMainMenu()
+        {
+            User x = new User();
             //to list the main menu options ...
             bool exitFlag = false;
             do
@@ -138,7 +148,7 @@ internal class Program
                         break;
                     case '4':
                         //to displaying all appointments ...
-                       Patient.PatientMenu();
+                        Patient.PatientMenu();
                         break;
                     case '0':
                         exitFlag = true;
@@ -148,6 +158,8 @@ internal class Program
                         Branch.SaveBranches();
                         //to save departments data to file ...
                         Department.SaveDepartmentsToFile();
+                        //to save services data to file ...
+                        Service.SaveServicesToFile();
                         //to save clinics data to file ...
                         Clinic.SaveClinicToFile();
                         //to save super admins data to file ...
@@ -158,9 +170,11 @@ internal class Program
                         SuperAdmin.SaveDoctorsToFile();
                         //to save patient data to file ...
                         Patient.SavePatientsToFile();
+                        Patient.SavePatientAppointmentsToFile(); // Save patient appointments to file
                         Console.ReadLine();//just to hold the screen ... 
-                         
+
                         Console.WriteLine("Thank you for using the Hotel System. Goodbye!");
+                        Environment.Exit(0); // Exit the application
                         break;
                     default:
                         Console.WriteLine("Invalid option, please try again.");

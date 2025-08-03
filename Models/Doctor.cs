@@ -19,6 +19,7 @@ namespace CodelineHealthCareCenter.Models
         public int DepartmentId;
         public int ClinicID;
         public string DoctorSpecialization;
+        public int BranchID;
         public List<Booking> DoctorAppointments = new List<Booking>();
         public List<PatientRecord> PatientRecords = new List<PatientRecord>();
         public List<DateTime> AvailableTimes = new List<DateTime>();
@@ -31,7 +32,7 @@ namespace CodelineHealthCareCenter.Models
         //====================================================
         //2. class properties ...
 
-        public int DoctorID { get; private set; }
+        //public int DoctorID { get; private set; }
         public static int DoctorCount => doctorCounter;
 
         //====================================================
@@ -39,7 +40,7 @@ namespace CodelineHealthCareCenter.Models
 
         public void ViewDoctorInfo() // Displays basic information about the doctor
         {
-            Console.WriteLine($"ID: {DoctorID}, Name: {UserName}, Email: {UserEmail}");
+            Console.WriteLine($"ID: {UserId}, Name: {UserName}, Email: {UserEmail}");
             Console.WriteLine($"Specialization: {DoctorSpecialization}, DeptID: {DepartmentId}, ClinicID: {ClinicID}");
             Console.WriteLine($"Available Times: {AvailableTimes.Count}, Patient Records: {PatientRecords.Count}"); 
 
@@ -58,14 +59,14 @@ namespace CodelineHealthCareCenter.Models
 
         public static void AddDoctor(string username, string password, string email, string specialization) // Adds a new doctor to the system
         {
-            var newDoctor = new Doctor(username, email, specialization, 0, 0);
+            var newDoctor = new Doctor(username, email, specialization);
             Doctors.Add(newDoctor);
             Console.WriteLine($"Doctor '{username}' added successfully.");
         }
 
         public static void UpdateDoctor(int doctorId, string username, string email, string specialization, bool isActive) // Updates an existing doctor's information
         {
-            var doctor = Doctors.FirstOrDefault(d => d.DoctorID == doctorId);
+            var doctor = Doctors.FirstOrDefault(d => d.UserId == doctorId);
             if (doctor == null)
             {
                 Console.WriteLine("Doctor not found.");
@@ -82,7 +83,7 @@ namespace CodelineHealthCareCenter.Models
         public static void GetDoctorById(int doctorId) // Retrieves a doctor by their ID and displays their information
      
         {
-            var doctor = Doctors.FirstOrDefault(d => d.DoctorID == doctorId);
+            var doctor = Doctors.FirstOrDefault(d => d.UserId == doctorId);
             if (doctor == null)
             {
                 Console.WriteLine("Doctor not found.");
@@ -143,7 +144,7 @@ namespace CodelineHealthCareCenter.Models
 
         public static void GetDoctorData(int doctorId) // Retrieves detailed information about a doctor, including their appointments and patient records
         {
-            var doctor = Doctors.FirstOrDefault(d => d.DoctorID == doctorId);
+            var doctor = Doctors.FirstOrDefault(d => d.UserId == doctorId);
             if (doctor == null)
             {
                 Console.WriteLine("Doctor not found.");
@@ -180,7 +181,7 @@ namespace CodelineHealthCareCenter.Models
 
         public static void AddAvailableTime(int doctorId, DateTime availableTime) // Adds an available time slot for a specific doctor
         {
-            var doctor = Doctors.FirstOrDefault(d => d.DoctorID == doctorId);
+            var doctor = Doctors.FirstOrDefault(d => d.UserId == doctorId);
             if (doctor == null)
             {
                 Console.WriteLine("Doctor not found.");
@@ -197,7 +198,7 @@ namespace CodelineHealthCareCenter.Models
 
         public static void RemoveAvailableTime(int doctorId, DateTime availableTime) // Removes an available time slot for a specific doctor
         {
-            var doctor = Doctors.FirstOrDefault(d => d.DoctorID == doctorId);
+            var doctor = Doctors.FirstOrDefault(d => d.UserId == doctorId);
             if (doctor == null)
             {
                 Console.WriteLine("Doctor not found.");
@@ -211,49 +212,51 @@ namespace CodelineHealthCareCenter.Models
             Console.WriteLine($"Available time {availableTime:G} removed for Doctor ID {doctorId}.");
         }
 
-        public void ViewMyAppointments() // Displays the appointments for the current doctor
+        public void ViewMyAppointments(Doctor doctor) // Displays the appointments for the current doctor
         {
             Console.WriteLine($"Appointments for Dr. {UserName}:");
-            if (DoctorAppointments.Count == 0)
+            if (doctor.DoctorAppointments.Count == 0)
             {
                 Console.WriteLine("No appointments found.");
                 return;
             }
-            foreach (var app in DoctorAppointments)
+            foreach (var app in doctor.DoctorAppointments)
                 Console.WriteLine($"- Booking ID: {app.BookingId}, Date: {app.BookingDateTime:G}");
             Additional.HoldScreen();
         }
         
 
-        public void AddPatientRecord() // Adds a patient record for a specific patient, including doctor notes and services provided
+        public void AddPatientRecord(Doctor doctor) // Adds a patient record for a specific patient, including doctor notes and services provided
         {
+            //to list all patient who have an appointment with this doctor ...
+            Validation.ListPatientsByDoctorId(doctor.UserId);
+            //to get the national ID of the patient ...
             string nationalId = Validation.StringValidation("Patient National ID");
-            //var patient = Patient.Patients.FirstOrDefault(p => p.UserNationalID == nationalId);
             foreach (var branch in Hospital.Branches)
             {
                 var patient = branch.Patients.FirstOrDefault(p => p.UserNationalID == nationalId);
-                if (patient != null)
-                    break;
                 if (patient == null)
                 {
                     Console.WriteLine("Patient not found.");
                     return;
                 }
+                //to get patient appointments ...
+                var patientAppointments = patient.PatientAppointments.Where(a => a.DoctorId == doctor.UserId).ToList();
                 string note = Validation.StringValidation("Doctor Note");
-                int count = Validation.IntValidation("Number of Services");
-
-                List<Service> selectedServices = new List<Service>();
-                for (int i = 0; i < count; i++)
+                //to get total cost of service ...
+                double totalCost = 0;
+                foreach(var app in doctor.DoctorAppointments)
                 {
-                    int sid = Validation.IntValidation($"Service ID #{i + 1}");
-                    var service = Service.Services.FirstOrDefault(s => s.ServiceId == sid);
-                    if (service != null)
-                        selectedServices.Add(service);
-                    else
-                        Console.WriteLine("Invalid service ID. Skipped.");
+                    foreach(var PatientAPP in patientAppointments)
+                    {
+                        if (app.BookingId == PatientAPP.BookingId)
+                        {
+                            totalCost += app.BookingService.Sum(s => s.Price);
+                        }
+                    }
                 }
 
-                var record = new PatientRecord(patient.UserId, ClinicID, note, selectedServices);
+                var record = new PatientRecord(patient.UserId, ClinicID, note, totalCost);
                 this.PatientRecords.Add(record);
                 patient.PatientRecords.Add(record);
 
@@ -261,45 +264,43 @@ namespace CodelineHealthCareCenter.Models
             }
         }
 
-        public static void SaveToFile(string filePath) // save data to file 
-        {
-            using StreamWriter writer = new StreamWriter(filePath);
-            foreach (var doc in Doctors)
-            {
-                // Save: DoctorID | UserName | Email | Specialization | DepartmentId | ClinicId | Status
-                writer.WriteLine($"{doc.DoctorID}|{doc.UserName}|{doc.UserEmail}|{doc.DoctorSpecialization}|{doc.DepartmentId}|{doc.ClinicID}|{doc.UserStatus}");
-            }
-        }
+        //public static void SaveToFile(string filePath) // save data to file 
+        //{
+        //    using StreamWriter writer = new StreamWriter(filePath);
+        //    foreach (var doc in Doctors)
+        //    {
+        //        // Save: DoctorID | UserName | Email | Specialization | DepartmentId | ClinicId | Status
+        //        writer.WriteLine($"{doc.UserId}|{doc.UserName}|{doc.UserEmail}|{doc.DoctorSpecialization}|{doc.DepartmentId}|{doc.ClinicID}|{doc.UserStatus}");
+        //    }
+        //}
 
-        public static void LoadFromFile(string filePath) 
-        {
-            Doctors.Clear();
-            doctorCounter = 0;
+        //public static void LoadFromFile(string filePath) 
+        //{
+        //    Doctors.Clear();
+        //    doctorCounter = 0;
 
-            if (!File.Exists(filePath)) return;
+        //    if (!File.Exists(filePath)) return;
 
-            string[] lines = File.ReadAllLines(filePath);
-            foreach (var line in lines)
-            {
-                string[] parts = line.Split('|');
-                if (parts.Length < 7) continue;
+        //    string[] lines = File.ReadAllLines(filePath);
+        //    foreach (var line in lines)
+        //    {
+        //        string[] parts = line.Split('|');
+        //        if (parts.Length < 7) continue;
 
-                Doctor doctor = new Doctor(
-                    username: parts[1],
-                    email: parts[2],
-                    specialization: parts[3],
-                    departmentId: int.Parse(parts[4]),
-                    clinicId: int.Parse(parts[5])
-                );
+        //        Doctor doctor = new Doctor(
+        //            username: parts[1],
+        //            email: parts[2],
+        //            specialization: parts[3]
+        //        );
 
-                doctor.DoctorID = int.Parse(parts[0]); // override auto-incremented ID
-                doctor.UserStatus = parts[6];
+        //        doctor.UserId = int.Parse(parts[0]); // override auto-incremented ID
+        //        doctor.UserStatus = parts[6];
 
-                Doctors.Add(doctor);
-                if (doctor.DoctorID > doctorCounter)
-                    doctorCounter = doctor.DoctorID;
-            }
-        }
+        //        Doctors.Add(doctor);
+        //        if (doctor.UserId > doctorCounter)
+        //            doctorCounter = doctor.UserId;
+        //    }
+        //}
 
 
 
@@ -323,19 +324,19 @@ namespace CodelineHealthCareCenter.Models
                 switch (choice)
                 {
                     case "1": // View Appointments
-                        int id = Validation.IntValidation("Enter Your Doctor ID");
-                        var doctor = Doctors.FirstOrDefault(d => d.DoctorID == id);
+                        string DoctorNationalId = Validation.StringValidation("Your Doctor national id");
+                        var doctor = BranchDepartment.Doctors.FirstOrDefault(d => d.UserNationalID == DoctorNationalId);
                         if (doctor != null)
-                            doctor.ViewMyAppointments();
+                            doctor.ViewMyAppointments(doctor);
                         else
                             Console.WriteLine("Doctor not found.");
                         break;
 
                     case "2": // Add Patient Record
-                        int did = Validation.IntValidation("Enter Your Doctor ID");
-                        var dr = Doctors.FirstOrDefault(d => d.DoctorID == did);
-                        if (dr != null)
-                            dr.AddPatientRecord();
+                        string DoctorNationalId2 = Validation.StringValidation("Your Doctor National id");
+                        var doctor2 = BranchDepartment.Doctors.FirstOrDefault(d => d.UserNationalID == DoctorNationalId2);
+                        if (doctor2 != null)
+                            doctor2.AddPatientRecord(doctor2);
                         else
                             Console.WriteLine("Doctor not found.");
                         break;
@@ -358,18 +359,13 @@ namespace CodelineHealthCareCenter.Models
         //====================================================
         //4. class constructor ...
 
-        public Doctor(string username, string email, string specialization, int departmentId, int clinicId)
+        public Doctor(string username, string email, string specialization)
         {
-            doctorCounter++;
-            DoctorID = doctorCounter;
             DoctorSpecialization = specialization;
-            DepartmentId = departmentId;
-            ClinicID = clinicId;
             UserName = username;
             UserEmail = email;
             UserRole = "Doctor";
             UserStatus = "Active";
-
             DoctorAppointments = new List<Booking>();
             PatientRecords = new List<PatientRecord>();
         }
